@@ -76,7 +76,7 @@ class OptiTrade:
         """
         return self.tseries[self.position:end_pos].argmin() + self.position
 
-    def check_profitable(self, intermediate: float) -> bool:
+    def check_profitable_swing(self, intermediate: float) -> bool:
         """Check profitability of opting out of time series in temporary dip.
 
         Method checks profitability of opting out of time series at current
@@ -96,7 +96,7 @@ class OptiTrade:
     def find_optimal_pairs(self):
         """Traverse the time series to find optimal values."""
         while self.position < len(self.tseries) - 1:
-            # Find start point
+            # Find and set start point
             opt_in = self.find_smaller()
             self.position = opt_in
             self.tmp.append(opt_in)
@@ -106,6 +106,7 @@ class OptiTrade:
                 decision_point = self.find_smaller(-self.tseries)
                 self.position = decision_point
                 self.tmp.append(decision_point)
+
                 # Find next time the time series exceeds current value
                 next_larger_id = self.find_next_larger()
                 # Handle case when the current peak is global
@@ -119,15 +120,15 @@ class OptiTrade:
 
                 # Check profitability in opting out and back in when dropped
                 intermediate_point = self.find_min(next_larger_id)
-                profitable = self.check_profitable(self.tseries
-                                                   [intermediate_point])
+                profitable_swing = self.check_profitable_swing(self.tseries
+                                                         [intermediate_point])
 
-                if profitable and self.net_positive():
+                if profitable_swing and self.net_positive():
                     # Add positions to registry
                     self.registered_pairs.append(self.tmp)
                     self.tmp = []
                     break
-                elif profitable:
+                elif profitable_swing:
                     # Handle case when opting in value can be reduced
                     self.position = self.find_smaller()
                     self.tmp[0] = self.position
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import numpy as np
     # Random test Series
-    base = np.cos(np.linspace(0, 2 * np.pi, 100))
+    base = np.sin(np.linspace(0, 2 * np.pi, 100))
     noise = np.random.normal(0, 0.08, size=100)
     test = pd.Series(5 + noise + base)
     # test = pd.Series([5.94, 5.89, 5.97, 6.0, 5.98, 6.07, 5.88, 5.98, 5.9])
