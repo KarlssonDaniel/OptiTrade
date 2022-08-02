@@ -120,8 +120,8 @@ class OptiTrade:
 
                 # Check profitability in opting out and back in when dropped
                 intermediate_point = self.find_min(next_larger_id)
-                profitable_swing = self.check_profitable_swing(self.tseries
-                                                         [intermediate_point])
+                profitable_swing = (self.check_profitable_swing
+                                    (self.tseries[intermediate_point]))
 
                 if profitable_swing and self.net_positive():
                     # Add positions to registry
@@ -130,25 +130,41 @@ class OptiTrade:
                     break
                 elif profitable_swing:
                     # Handle case when opting in value can be reduced
-                    self.position = self.find_smaller()
-                    self.tmp[0] = self.position
+                    tmp = self.find_smaller()
+                    self.position = tmp
+                    if self.tseries[tmp] < self.tseries[self.tmp[0]]:
+                        self.position = tmp
+                        self.tmp[0] = self.position
                     self.tmp.pop(1)
                 else:
-                    # Move to next larger value
+                    # Move opt in to lower and then move to next larger value
+                    tmp = (self.tseries[self.tmp[0]:next_larger_id].where
+                           (self.tseries <
+                            self.tseries[self.tmp[0]]).first_valid_index())
+                    if tmp is not None:
+                        self.tmp[0] = tmp
                     self.position = next_larger_id
                     self.tmp.pop(1)
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    import numpy as np
-    # Random test Series
-    base = np.sin(np.linspace(0, 2 * np.pi, 100))
-    noise = np.random.normal(0, 0.08, size=100)
-    test = pd.Series(5 + noise + base)
-    # test = pd.Series([5.94, 5.89, 5.97, 6.0, 5.98, 6.07, 5.88, 5.98, 5.9])
+    import psycopg2 as ps
+    import yaml
 
-    ot = OptiTrade(test, penalty=0.0025)
+    from OMXShelpers.Database import postgres
+
+    with open(r"C:\Users\danie\OneDrive\Skrivbord\Projects\OptiTrader" +
+              r"\ConfFiles\SQLConf.yml") as f:
+        conf = yaml.full_load(f)
+
+    conn = ps.connect(dbname="BronzeOMXS30", **conf)
+    df = postgres.read_df_from_db("\"OpenPrice\"", conn)
+    df = df.set_index('currenttime').sort_index()
+    df = df.dropna()['ABB.ST']
+    df.reset_index(drop=True, inplace=True)
+    print(df)
+    ot = OptiTrade(df, penalty=0.0025)
 
     ot.find_optimal_pairs()
 
@@ -158,8 +174,8 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(12, 6))
     plt.plot(ot.tseries, label="Values")
-    plt.scatter(opting_in, ot.tseries[opting_in], label="Opting in")
-    plt.scatter(opting_out, ot.tseries[opting_out], label="Opting out")
+    plt.scatter(opting_in, ot.tseries[opting_in], label="Opting in", c='y')
+    plt.scatter(opting_out, ot.tseries[opting_out], label="Opting out", c='g')
     plt.legend()
     plt.grid()
     plt.title("Optimal trading actions")
