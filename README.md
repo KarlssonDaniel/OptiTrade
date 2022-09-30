@@ -1,7 +1,9 @@
 # OptiTrade
-A trading god with knowledge of all upcoming events in a time series. Meant as a target for less majestic traders.
+A trading god with knowledge of all upcoming events in a time series. Meant as an target/ upper limit for less majestic traders.
 
 The idea is that for a given time series and action penalty (commission fee) find the optimal actions to maximize the sum of the time series when accounting for the penalty. An example would be how to trade a stock optimally in a given (known) window of time.
+
+**The script is not verified, but has shown reasonable results on a few example data sets**
 
 # Basic goal
 
